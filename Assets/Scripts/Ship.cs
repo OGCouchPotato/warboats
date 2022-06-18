@@ -5,84 +5,155 @@ using UnityEngine;
 [RequireComponent(typeof(MeshRenderer))]
 public class Ship : MonoBehaviour
 {
+    [HideInInspector]
     public float size;
-    public Orientation currentOrientation; 
+    [HideInInspector]
+    public Orientation currentOrientation;
     private bool _isSelected = false;
-
     private Camera _mainCamera;
     private MeshRenderer _mRenderer;
     private Color _meshColor;
     private Color _highlightedColor = Color.yellow;
-
+    private Color _misplaceColor = Color.red;
+    private bool _isPlaced = false;
     private float _boardY = -1.27f;
 
-    void Start() {
+    void Start()
+    {
+        _misplaceColor.a = 0.5f;
         _mainCamera = Camera.main;
         _mRenderer = gameObject.GetComponent<MeshRenderer>();
         _meshColor = _mRenderer.material.color;
-        currentOrientation = Orientation.VERTICAL;
+        currentOrientation = Orientation.UP;
     }
-    void OnMouseEnter() {
-        if (GameManager.Instance.gameState != GameState.ShipPlacement) {
+    void OnMouseEnter()
+    {
+        if (GameManager.Instance.gameState != GameState.ShipPlacement)
+        {
             return;
         }
-       _mRenderer.material.color = _highlightedColor;
+        _mRenderer.material.color = _highlightedColor;
     }
 
-    void OnMouseDown() {
-        if (GameManager.Instance.gameState != GameState.ShipPlacement || _isSelected) {
+    public IEnumerator FlashRed()
+    {
+        _mRenderer.material.color = _misplaceColor;
+        yield return new WaitForSeconds(0.1f);
+        _mRenderer.material.color = _meshColor;
+    }
+
+    void OnMouseDown()
+    {
+        if (GameManager.Instance.gameState != GameState.ShipPlacement || ShipManager.Instance.CurrentlySelected != null)
+        {
             return;
         }
+
         _isSelected = true;
+
+        if (_isPlaced)
+        {
+            _isPlaced = false;
+            Vector3 currentPos = transform.position;
+            BoardManager.Instance.UpdateTiles(currentOrientation, size, new Vector2(currentPos.x, currentPos.z), false, TileType.PLAYER);
+            ShipManager.Instance.numPlaced--;
+        }
+
         _meshColor.a = 0.5f;
         _mRenderer.material.color = _meshColor;
         gameObject.layer = LayerMask.NameToLayer("Ignore Raycast");
         ShipManager.Instance.CurrentlySelected = this;
-    }  
+    }
 
-    void OnMouseExit() {
-        if (GameManager.Instance.gameState != GameState.ShipPlacement) {
+    void OnMouseExit()
+    {
+        if (GameManager.Instance.gameState != GameState.ShipPlacement)
+        {
             return;
         }
         _mRenderer.material.color = _meshColor;
     }
 
-    private void RotateShip() {
+    private void RotateShip()
+    {
         if (!_isSelected) return;
 
         Vector3 eulers = gameObject.transform.eulerAngles;
         eulers.y += 90.0f;
-        if (eulers.y >= 360.0f) {
+        if (eulers.y >= 360.0f)
+        {
             eulers.y = 0.0f;
         }
         gameObject.transform.rotation = Quaternion.Euler(eulers);
-        currentOrientation = currentOrientation == Orientation.HORIZONTAL ? Orientation.VERTICAL : Orientation.HORIZONTAL;
+        if (currentOrientation == Orientation.RIGHT)
+        {
+            currentOrientation = 0;
+        }
+        else
+        {
+            currentOrientation++;
+        }
     }
 
-    public void PlaceShip(Vector2 tilePos) {
-        _isSelected = false;
-        _meshColor.a = 1.0f;
-        _mRenderer.material.color = _meshColor;
-        gameObject.layer = LayerMask.NameToLayer("Default");
-        ShipManager.Instance.CurrentlySelected = null;
+    public void RotateShip(Orientation newOrientation) {
+        Vector3 eulers = gameObject.transform.eulerAngles;
+        if (newOrientation == Orientation.DOWN) {
+            eulers.y = 180.0f;
+        } else if (newOrientation == Orientation.RIGHT) {
+            eulers.y = 90.0f;
+        } else if (newOrientation == Orientation.LEFT) {
+            eulers.y = 270.0f;
+        } else {
+            eulers.y = 0.0f;
+        }
+        transform.rotation = Quaternion.Euler(eulers);
+    }
+
+    public void PlaceShip(Vector2 tilePos, bool random)
+    {
+        if (!random) {
+            _isSelected = false;
+            _meshColor.a = 1.0f;
+            _mRenderer.material.color = _meshColor;
+            gameObject.layer = LayerMask.NameToLayer("Default");
+            ShipManager.Instance.CurrentlySelected = null;
+        }
+        _isPlaced = true;
+        BoardManager.Instance.UpdateTiles(currentOrientation, size, tilePos, true, TileType.PLAYER);
+        ShipManager.Instance.numPlaced++;
         transform.position = new Vector3(tilePos.x, _boardY, tilePos.y);
     }
 
-    void Update ()
+
+    void Update()
     {
-        if (Input.GetKeyDown(KeyCode.R)) {
+        if (Input.GetKeyDown(KeyCode.R))
+        {
             RotateShip();
         }
-        if (_isSelected) {
+        if (_isSelected)
+        {
             Vector3 mousePos = Input.mousePosition;
-            Vector3 mouseWorldPosition = _mainCamera.ScreenToWorldPoint(new Vector3(mousePos.x, mousePos.y, _mainCamera.nearClipPlane+7));
-            mouseWorldPosition.x += 2.0f;
+            Vector3 mouseWorldPosition = _mainCamera.ScreenToWorldPoint(new Vector3(mousePos.x, mousePos.y, _mainCamera.nearClipPlane + 12));
             transform.position = mouseWorldPosition;
         }
     }
 }
 
-public enum Orientation {
-    HORIZONTAL,
-    VERTICAL
+public enum Orientation
+{
+    DOWN,
+    LEFT,
+    UP,
+    RIGHT
+}
+
+public enum Shiptype
+{
+    EMPTY,
+    CARRIER,
+    BATTLESHIP,
+    CRUISER,
+    SUBMARINE,
+    DESTROYER
 }
