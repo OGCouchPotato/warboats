@@ -6,24 +6,32 @@ public class Tile : MonoBehaviour
 {
     [SerializeField]
     [HideInInspector]
-    public GameObject _selected;
+    public GameObject selected;
+
+    [HideInInspector]
     public TileType tileType;
+
+    [HideInInspector]
     public Vector2 tileIndex;
+
+    [HideInInspector]
     public bool isOccupied = false;
+
+    [HideInInspector]
     public bool isMarked = false;
+
+    [HideInInspector]
     public Shiptype shipType;
+
     private Color _hitColor = Color.red;
     private Color _missColor = Color.blue;
     private Color _sunkColor = new Color(1.0f, 0.65f, 0.0f, 1.0f);
-
-    private float _clickCooldownDuration = 3.0f;
-    private float _clickCooldownTimer = 0.0f;
 
     private MeshRenderer _meshRenderer;
 
     void Start()
     {
-        _meshRenderer = _selected.GetComponent<MeshRenderer>();
+        _meshRenderer = selected.GetComponent<MeshRenderer>();
     }
 
     public IEnumerator LaunchMissile()
@@ -31,6 +39,7 @@ public class Tile : MonoBehaviour
         float time = 0.0f;
         float duration = 1.0f;
         GameObject launchedMissile;
+        BoardManager.Instance.oneTilePerTurn = true;
         if (tileType == TileType.PLAYER)
         {
             yield return new WaitForSeconds(1.0f);
@@ -45,11 +54,11 @@ public class Tile : MonoBehaviour
             Vector3 pos = launchedMissile.transform.position;
             if (tileType == TileType.PLAYER)
             {
-                pos.y -= 0.05f;
+                pos.y -= 0.1f;
             }
             else
             {
-                pos.x -= 0.05f;
+                pos.x -= 0.1f;
             }
 
             launchedMissile.transform.position = pos;
@@ -59,13 +68,17 @@ public class Tile : MonoBehaviour
         Destroy(launchedMissile);
         CheckAttack();
         yield return new WaitForSeconds(2.0f);
-        if (GameManager.Instance.gameState == GameState.PlayerTurn)
+        if (ShipManager.Instance.hasWon == false)
         {
-            GameManager.Instance.ChangeState(GameState.OpponentTurn);
-        }
-        else
-        {
-            GameManager.Instance.ChangeState(GameState.PlayerTurn);
+            BoardManager.Instance.oneTilePerTurn = false;
+            if (GameManager.Instance.gameState == GameState.PlayerTurn)
+            {
+                GameManager.Instance.ChangeState(GameState.OpponentTurn);
+            }
+            else
+            {
+                GameManager.Instance.ChangeState(GameState.PlayerTurn);
+            }
         }
 
     }
@@ -77,23 +90,31 @@ public class Tile : MonoBehaviour
         {
             if (tileType == TileType.PLAYER)
             {
+                AIManager.Instance.SetHit(this);
                 ShipManager.Instance.playerHitCount++;
             }
             else
             {
                 ShipManager.Instance.enemyHitCount++;
             }
- 
+
             List<Tile> tiles = BoardManager.Instance.CheckIfSunk(shipType, tileType);
             if (tiles != null)
             {
                 if (tileType == TileType.ENEMY)
                 {
-                    _selected.SetActive(true);
+                    selected.SetActive(true);
                     foreach (Tile _tile in tiles)
                     {
-                        _tile._selected.GetComponent<MeshRenderer>().material.color = _sunkColor;
+                        _tile.selected.GetComponent<MeshRenderer>().material.color = _sunkColor;
                     }
+                } else {
+                    Ship sunkShip = ShipManager.Instance.GetShipByType(shipType);
+                    if (sunkShip != null) {
+                        StartCoroutine(sunkShip.SinkShip());
+                    }
+                    
+                    Instantiate(ShipManager.Instance.fireParticles, new Vector3(tileIndex.x, -1.27f, tileIndex.y), Quaternion.Euler(-90.0f, 0.0f, 0.0f));
                 }
 
                 ShipManager.Instance.CheckScore(tileType);
@@ -112,13 +133,13 @@ public class Tile : MonoBehaviour
         }
         else
         {
-            _selected.SetActive(true);
+            selected.SetActive(true);
             _meshRenderer.material.color = _missColor;
         }
 
     }
 
-     void OnMouseEnter()
+    void OnMouseEnter()
     {
         if (GameManager.Instance.gameState == GameState.PlayerTurn)
         {
@@ -128,14 +149,38 @@ public class Tile : MonoBehaviour
                 {
                     return;
                 }
-                _selected.SetActive(true);
+                selected.SetActive(true);
             }
         }
         else if (GameManager.Instance.gameState == GameState.ShipPlacement)
         {
             if (tileType == TileType.PLAYER)
             {
-                _selected.SetActive(true);
+                Ship currentShip = ShipManager.Instance.CurrentlySelected;
+                if (currentShip == null) {
+                    selected.SetActive(true);
+                    return;
+                }
+                List<Tile> tiles = BoardManager.Instance.GetHoveringTiles(currentShip.currentOrientation, currentShip.size, tileIndex);
+                if (tiles.Count != currentShip.size) {
+                    foreach(Tile _tile in tiles) {
+                       _tile.selected.GetComponent<MeshRenderer>().material.color = _hitColor;
+                       _tile.selected.SetActive(true);
+                    }
+                    return;
+                }
+                foreach(Tile _tile in tiles) {
+                    if(_tile.isOccupied) {
+                        foreach(Tile tile in tiles) {
+                            tile.selected.GetComponent<MeshRenderer>().material.color = _hitColor;
+                            tile.selected.SetActive(true);
+                        }
+                        return;
+                    }
+                    _tile.selected.GetComponent<MeshRenderer>().material.color = Color.yellow;
+                    _tile.selected.SetActive(true);
+                }
+                return;
             }
         }
         else
@@ -149,7 +194,7 @@ public class Tile : MonoBehaviour
     {
         if (GameManager.Instance.gameState == GameState.PlayerTurn)
         {
-            if (tileType == TileType.ENEMY && isMarked == false /*&& _clickCooldownTimer >= _clickCooldownDuration*/)
+            if (tileType == TileType.ENEMY && isMarked == false && BoardManager.Instance.oneTilePerTurn == false)
             {
                 isMarked = true;
                 StartCoroutine(LaunchMissile());
@@ -163,12 +208,12 @@ public class Tile : MonoBehaviour
                 if (BoardManager.Instance.CanPlace(currentShip.currentOrientation, currentShip.size, tileIndex, TileType.PLAYER))
                 {
                     currentShip.PlaceShip(tileIndex, false);
+                    BoardManager.Instance.ScrubHoverTiles();
                 }
                 else
                 {
                     StartCoroutine(currentShip.FlashRed());
                 }
-
             }
         }
         else
@@ -188,14 +233,23 @@ public class Tile : MonoBehaviour
                 {
                     return;
                 }
-                _selected.SetActive(false);
+                selected.SetActive(false);
             }
         }
         else if (GameManager.Instance.gameState == GameState.ShipPlacement)
         {
             if (tileType == TileType.PLAYER)
             {
-                _selected.SetActive(false);
+                Ship currentShip = ShipManager.Instance.CurrentlySelected;
+                if (currentShip == null) {
+                    selected.SetActive(false);
+                    return;
+                }
+                List<Tile> tiles = BoardManager.Instance.GetHoveringTiles(currentShip.currentOrientation, currentShip.size, tileIndex);
+                foreach(Tile _tile in tiles) {
+                    _tile.selected.GetComponent<MeshRenderer>().material.color = Color.yellow;
+                    _tile.selected.SetActive(false);
+                }
             }
         }
         else

@@ -210,5 +210,9 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ee1eac1dfa8d2464e96239a01c1dc166, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  _selected: {fileID: 2739740032264232545}
+  selected: {fileID: 2739740032264232545}
   tileType: 0
+  tileIndex: {x: 0, y: 0}
+  isOccupied: 0
+  isMarked: 0
+  shipType: 0

@@ -22,6 +22,8 @@ public class ShipManager : MonoBehaviour
 
     public float playerHitCount = 0;
     public float enemyHitCount = 0;
+
+    public bool hasWon = false;
     public Ship CurrentlySelected { get; set;}
 
     void Awake() {
@@ -65,17 +67,29 @@ public class ShipManager : MonoBehaviour
         resultText.GetComponent<TMPro.TextMeshProUGUI>().text = result;
         resultText.SetActive(true);
         replayButton.SetActive(true);
+        hasWon = true;
+    }
+
+    public Ship GetShipByType(Shiptype shiptype) {
+        foreach(GameObject _ship in playerShips) {
+            Ship currentShip = _ship.GetComponent<Ship>();
+            if (currentShip.shiptype == shiptype) {
+                return currentShip;
+            }
+        }
+        return null;
     }
 
     public void RandomShipPlacement() {
         BoardManager.Instance.ResetBoard();
+        numPlaced = 0;
         foreach(GameObject _ship in playerShips) {
             Ship currentShip = _ship.GetComponent<Ship>();
-            currentShip.currentOrientation = (Orientation)Random.Range(0, 3);
+            currentShip.currentOrientation = (Orientation)Random.Range(0, 4);
             currentShip.RotateShip(currentShip.currentOrientation);
-            Vector2 randomTile = new Vector2(Random.Range(0, 9),Random.Range(0, 9));
+            Vector2 randomTile = new Vector2(Random.Range(0, 10),Random.Range(0, 10));
             while(BoardManager.Instance.CanPlace(currentShip.currentOrientation, currentShip.size, randomTile, TileType.PLAYER) == false) {
-                randomTile = new Vector2(Random.Range(0, 9),Random.Range(0, 9));
+                randomTile = new Vector2(Random.Range(0, 10),Random.Range(0, 10));
             }
             currentShip.PlaceShip(randomTile, true);
         }
@@ -83,12 +97,12 @@ public class ShipManager : MonoBehaviour
 
     public void EnemyShipPlacement() {
         for (int i = 0; i < ships.Count; i++) {
-            Orientation randomOrientation = (Orientation)Random.Range(0, 3);
-            Vector2 randomTile = new Vector2(Random.Range(0, 9),Random.Range(0, 9));
+            Orientation randomOrientation = (Orientation)Random.Range(0, 4);
+            Vector2 randomTile = new Vector2(Random.Range(0, 10),Random.Range(0, 10));
             while(BoardManager.Instance.CanPlace(randomOrientation, ships[i].size, randomTile, TileType.ENEMY) == false) {
-                randomTile = new Vector2(Random.Range(0, 9),Random.Range(0, 9));
+                randomTile = new Vector2(Random.Range(0, 10),Random.Range(0, 10));
             }
-            BoardManager.Instance.UpdateTiles(randomOrientation, ships[i].size, randomTile, true, TileType.ENEMY);
+            BoardManager.Instance.UpdateTiles(randomOrientation, ships[i].shiptype, ships[i].size, randomTile, true, TileType.ENEMY);
         }
         randomButton.SetActive(false);
         readyButton.SetActive(false);

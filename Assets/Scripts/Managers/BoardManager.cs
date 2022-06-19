@@ -21,8 +21,7 @@ public class BoardManager : MonoBehaviour
     public delegate Tile GetTileAtPosition(Vector2 tilePos);
     public GetTileAtPosition tileDelegate;
 
-    private bool _flip3ShipPlayer = false;
-    private bool _flip3ShipEnemy = false;
+    public bool oneTilePerTurn = false;
 
     void Awake()
     {
@@ -59,7 +58,7 @@ public class BoardManager : MonoBehaviour
     }
 
     public List<Tile> CheckIfSunk(Shiptype shipType, TileType tileType)
-    {  
+    {
         Dictionary<Vector2, Tile> tiles = tileType == TileType.PLAYER ? playerTiles : opponentTiles;
         List<Tile> result = new List<Tile>();
         foreach (Tile _tile in tiles.Values)
@@ -68,11 +67,15 @@ public class BoardManager : MonoBehaviour
             {
                 continue;
             }
-            if (_tile.isMarked == false) {
+            if (_tile.isMarked == false)
+            {
                 return null;
             }
 
             result.Add(_tile);
+        }
+        if (tileType == TileType.PLAYER) {
+            AIManager.Instance.SetSunk();
         }
         return result;
     }
@@ -99,23 +102,29 @@ public class BoardManager : MonoBehaviour
             for (int j = 0; j < _height; j++)
             {
                 Vector2 index = new Vector2(i, j);
-                if (playerTiles[index].isMarked == false && playerTiles[index]._selected.activeInHierarchy) {
-                    playerTiles[index]._selected.SetActive(false);
+                if (playerTiles[index].isMarked == false && playerTiles[index].selected.activeInHierarchy)
+                {
+                    playerTiles[index].selected.SetActive(false);
                 }
-                if (opponentTiles[index].isMarked == false && opponentTiles[index]._selected.activeInHierarchy) {
-                    opponentTiles[index]._selected.SetActive(false);
+                if (opponentTiles[index].isMarked == false && opponentTiles[index].selected.activeInHierarchy)
+                {
+                    opponentTiles[index].selected.SetActive(false);
                 }
             }
         }
     }
 
-    public void UpdateTiles(Orientation shipOrientation, float shipSize, Vector2 tilePos, bool placement, TileType tileType)
+    public void UpdateTiles(Orientation shipOrientation, Shiptype shipType, float shipSize, Vector2 tilePos, bool placement, TileType tileType)
     {
         tileDelegate = tileType == TileType.PLAYER ? BoardManager.Instance.GetPlayerTileAtPosition : BoardManager.Instance.GetOpponentTileAtPosition;
+        if (placement == false)
+        {
+            shipType = Shiptype.EMPTY;
+        }
         tileDelegate(tilePos).isOccupied = placement;
+        tileDelegate(tilePos).shipType = shipType;
         if (shipSize == 5)
         {
-            tileDelegate(tilePos).shipType = Shiptype.BATTLESHIP;
             for (int i = 1; i < 3; i++)
             {
                 Vector2 tile1 = tilePos;
@@ -130,15 +139,14 @@ public class BoardManager : MonoBehaviour
                     tile1.x += i;
                     tile2.x -= i;
                 }
-                tileDelegate(tile1).shipType = Shiptype.BATTLESHIP;
+                tileDelegate(tile1).shipType = shipType;
                 tileDelegate(tile1).isOccupied = placement;
-                tileDelegate(tile2).shipType = Shiptype.BATTLESHIP;
+                tileDelegate(tile2).shipType = shipType;
                 tileDelegate(tile2).isOccupied = placement;
             }
         }
         else if (shipSize == 4)
         {
-            tileDelegate(tilePos).shipType = Shiptype.CARRIER;
             Vector2 tile1 = tilePos;
             Vector2 tile2 = tilePos;
             Vector2 tile3 = tilePos;
@@ -167,52 +175,19 @@ public class BoardManager : MonoBehaviour
                 tile3.y += 2;
             }
             tileDelegate(tile1).isOccupied = placement;
-            tileDelegate(tile1).shipType = Shiptype.CARRIER;
+            tileDelegate(tile1).shipType = shipType;
             tileDelegate(tile2).isOccupied = placement;
-            tileDelegate(tile2).shipType = Shiptype.CARRIER;
+            tileDelegate(tile2).shipType = shipType;
             tileDelegate(tile3).isOccupied = placement;
-            tileDelegate(tile3).shipType = Shiptype.CARRIER;
+            tileDelegate(tile3).shipType = shipType;
         }
         else
         {
-            Shiptype type;
-            if (shipSize == 2)
-            {
-                type = Shiptype.DESTROYER;
-            }
-            else
-            {
-                if (tileType == TileType.PLAYER)
-                {
-                    if (_flip3ShipPlayer == false)
-                    {
-                        type = Shiptype.CRUISER;
-                        _flip3ShipPlayer = true;
-                    }
-                    else
-                    {
-                        type = Shiptype.SUBMARINE;
-                    }
-                }
-                else
-                {
-                    if (_flip3ShipEnemy == false)
-                    {
-                        type = Shiptype.CRUISER;
-                        _flip3ShipEnemy = true;
-                    }
-                    else
-                    {
-                        type = Shiptype.SUBMARINE;
-                    }
-                }
-
-            }
             for (int i = 1; i < shipSize; i++)
             {
                 Vector2 tile = tilePos;
                 tileDelegate(tile).isOccupied = placement;
-                tileDelegate(tile).shipType = type;
+                tileDelegate(tile).shipType = shipType;
                 if (shipOrientation == Orientation.UP)
                 {
                     tile.x -= i;
@@ -230,19 +205,125 @@ public class BoardManager : MonoBehaviour
                     tile.y += i;
                 }
                 tileDelegate(tile).isOccupied = placement;
-                tileDelegate(tile).shipType = type;
+                tileDelegate(tile).shipType = shipType;
             }
         }
-        if (placement == false)
+    }
+
+    public List<Tile> GetHoveringTiles(Orientation shipOrientation, float shipSize, Vector2 tilePos)
+    {
+        List<Tile> result = new List<Tile>();
+        result.Add(GetPlayerTileAtPosition(tilePos));
+        if (shipSize == 5)
         {
-            ResetBoard();
+            for (int i = 1; i < 3; i++)
+            {
+                Vector2 check1 = tilePos;
+                Vector2 check2 = tilePos;
+                if (shipOrientation == Orientation.LEFT || shipOrientation == Orientation.RIGHT)
+                {
+                    check1.y += i;
+                    check2.y -= i;
+                }
+                else
+                {
+                    check1.x += i;
+                    check2.x -= i;
+                }
+
+                Tile tile1 = GetPlayerTileAtPosition(check1);
+                Tile tile2 = GetPlayerTileAtPosition(check2);
+                if (tile1 != null)
+                {
+                    result.Add(tile1);
+                }
+                if (tile2 != null)
+                {
+                    result.Add(tile2);
+                }
+            }
+            return result;
+        }
+        else if (shipSize == 4)
+        {
+            Vector2 check1 = tilePos;
+            Vector2 check2 = tilePos;
+            Vector2 check3 = tilePos;
+            if (shipOrientation == Orientation.DOWN)
+            {
+                check1.x -= 1;
+                check2.x += 1;
+                check3.x += 2;
+            }
+            else if (shipOrientation == Orientation.UP)
+            {
+                check1.x += 1;
+                check2.x -= 1;
+                check3.x -= 2;
+            }
+            else if (shipOrientation == Orientation.LEFT)
+            {
+                check1.y += 1;
+                check2.y -= 1;
+                check3.y -= 2;
+            }
+            else if (shipOrientation == Orientation.RIGHT)
+            {
+                check1.y -= 1;
+                check2.y += 1;
+                check3.y += 2;
+            }
+            Tile tile1 = GetPlayerTileAtPosition(check1);
+            Tile tile2 = GetPlayerTileAtPosition(check2);
+            Tile tile3 = GetPlayerTileAtPosition(check3);
+            if (tile1 != null)
+            {
+                result.Add(tile1);
+            }
+            if (tile2 != null)
+            {
+                result.Add(tile2);
+            }
+            if (tile3 != null)
+            {
+                result.Add(tile3);
+            }
+            return result;
+        }
+        else
+        {
+            for (int i = 1; i < shipSize; i++)
+            {
+                Vector2 check = tilePos;
+                if (shipOrientation == Orientation.UP)
+                {
+                    check.x -= i;
+                }
+                else if (shipOrientation == Orientation.DOWN)
+                {
+                    check.x += i;
+                }
+                else if (shipOrientation == Orientation.LEFT)
+                {
+                    check.y -= i;
+                }
+                else if (shipOrientation == Orientation.RIGHT)
+                {
+                    check.y += i;
+                }
+                Tile tile = GetPlayerTileAtPosition(check);
+                if (tile != null) {
+                    result.Add(tile);
+                }
+            }
+            return result;
         }
     }
 
     public bool CanPlace(Orientation shipOrientation, float shipSize, Vector2 tilePos, TileType tileType)
     {
-        BoardManager.Instance.tileDelegate = tileType == TileType.PLAYER ? BoardManager.Instance.GetPlayerTileAtPosition : BoardManager.Instance.GetOpponentTileAtPosition;
-        if (BoardManager.Instance.tileDelegate(tilePos).isOccupied == true)
+        tileDelegate = tileType == TileType.PLAYER ? BoardManager.Instance.GetPlayerTileAtPosition : BoardManager.Instance.GetOpponentTileAtPosition;
+        if (tileDelegate(tilePos).isOccupied == true)
         {
             return false;
         }
@@ -263,11 +344,11 @@ public class BoardManager : MonoBehaviour
                     check2.x -= i;
                 }
 
-                if (BoardManager.Instance.tileDelegate(check1) == null || BoardManager.Instance.tileDelegate(check2) == null)
+                if (tileDelegate(check1) == null || tileDelegate(check2) == null)
                 {
                     return false;
                 }
-                if (BoardManager.Instance.tileDelegate(check1).isOccupied == true || BoardManager.Instance.tileDelegate(check2).isOccupied == true)
+                if (tileDelegate(check1).isOccupied == true || tileDelegate(check2).isOccupied == true)
                 {
                     return false;
                 }

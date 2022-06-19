@@ -113,4 +113,4 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   size: 5
   currentOrientation: 0
-  shipOffset: 0
+  shiptype: 2

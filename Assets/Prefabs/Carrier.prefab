@@ -99,7 +99,7 @@ MonoBehaviour:
   m_EditorClassIdentifier: 
   size: 4
   currentOrientation: 1
-  shipOffset: 0
+  shiptype: 1
 --- !u!64 &488822731122796454
 MeshCollider:
   m_ObjectHideFlags: 0

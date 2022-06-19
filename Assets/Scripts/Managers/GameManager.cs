@@ -7,6 +7,8 @@ using UnityEngine.SceneManagement;
 public class GameManager : MonoBehaviour
 {
     public static GameManager Instance;
+
+    [HideInInspector]
     public GameState gameState;
     
     void Awake() {
@@ -21,6 +23,10 @@ public class GameManager : MonoBehaviour
     public void Replay() {
         Scene scene = SceneManager.GetActiveScene();
         SceneManager.LoadScene(scene.name);
+    }
+
+    public void ExitApplication() {
+        Application.Quit();
     }
 
     public void ChangeState(GameState newState) {
@@ -40,13 +46,8 @@ public class GameManager : MonoBehaviour
             case GameState.OpponentTurn:
                 BoardManager.Instance.ScrubHoverTiles();
                 StartCoroutine(CameraController.Instance.ToggleCameraMode(CameraMode.DEFENSE));
-                float randomX = UnityEngine.Random.Range(0, 9);
-                float randomY = UnityEngine.Random.Range(0, 9);
-                Tile randomTile = BoardManager.Instance.GetPlayerTileAtPosition(new Vector2(randomX, randomY));
-                while(randomTile.isMarked == true) {
-                    randomTile = BoardManager.Instance.GetPlayerTileAtPosition(new Vector2(UnityEngine.Random.Range(0, 9), UnityEngine.Random.Range(0, 9)));
-                }
-                StartCoroutine(randomTile.LaunchMissile());
+                Tile guessedTile = AIManager.Instance.MakeGuess();
+                StartCoroutine(guessedTile.LaunchMissile());
                 break;
             case GameState.EndScreen:
                 break;

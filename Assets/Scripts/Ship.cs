@@ -7,8 +7,13 @@ public class Ship : MonoBehaviour
 {
     [HideInInspector]
     public float size;
+
     [HideInInspector]
     public Orientation currentOrientation;
+
+    [HideInInspector]
+    public Shiptype shiptype;
+
     private bool _isSelected = false;
     private Camera _mainCamera;
     private MeshRenderer _mRenderer;
@@ -42,6 +47,21 @@ public class Ship : MonoBehaviour
         _mRenderer.material.color = _meshColor;
     }
 
+    public IEnumerator SinkShip()
+    {
+        _mRenderer.material.color = Color.black;
+        float time = 0.0f;
+        float duration = 0.5f;
+        while (time < duration)
+        {
+            Vector3 pos = transform.position;
+            pos.y -= 0.002f;
+            transform.position = pos;
+            time += Time.unscaledDeltaTime;
+            yield return null;
+        }
+    }
+
     void OnMouseDown()
     {
         if (GameManager.Instance.gameState != GameState.ShipPlacement || ShipManager.Instance.CurrentlySelected != null)
@@ -55,7 +75,7 @@ public class Ship : MonoBehaviour
         {
             _isPlaced = false;
             Vector3 currentPos = transform.position;
-            BoardManager.Instance.UpdateTiles(currentOrientation, size, new Vector2(currentPos.x, currentPos.z), false, TileType.PLAYER);
+            BoardManager.Instance.UpdateTiles(currentOrientation, shiptype, size, new Vector2(currentPos.x, currentPos.z), false, TileType.PLAYER);
             ShipManager.Instance.numPlaced--;
         }
 
@@ -93,6 +113,7 @@ public class Ship : MonoBehaviour
         {
             currentOrientation++;
         }
+        BoardManager.Instance.ScrubHoverTiles();
     }
 
     public void RotateShip(Orientation newOrientation) {
@@ -119,7 +140,7 @@ public class Ship : MonoBehaviour
             ShipManager.Instance.CurrentlySelected = null;
         }
         _isPlaced = true;
-        BoardManager.Instance.UpdateTiles(currentOrientation, size, tilePos, true, TileType.PLAYER);
+        BoardManager.Instance.UpdateTiles(currentOrientation, shiptype, size, tilePos, true, TileType.PLAYER);
         ShipManager.Instance.numPlaced++;
         transform.position = new Vector3(tilePos.x, _boardY, tilePos.y);
     }
@@ -145,7 +166,8 @@ public enum Orientation
     DOWN,
     LEFT,
     UP,
-    RIGHT
+    RIGHT,
+    LOST
 }
 
 public enum Shiptype
