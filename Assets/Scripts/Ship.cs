@@ -71,6 +71,8 @@ public class Ship : MonoBehaviour
 
         _isSelected = true;
 
+        ShipManager.Instance.placementTooltip.SetActive(true);
+        // If ship is already placed, clear previous tiles and decrement num placed
         if (_isPlaced)
         {
             _isPlaced = false;

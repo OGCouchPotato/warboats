@@ -9,22 +9,28 @@ public class ShipManager : MonoBehaviour
     public GameObject randomButton;
     public GameObject resultText;
     public GameObject replayButton;
-    public List<Ship> ships;
-    private List<GameObject> playerShips;
     public GameObject shipDock;
     public GameObject fireParticles;
-    //public GameObject phaseUI;
+    public GameObject placeShipText;
+    public GameObject placementTooltip;
+    public List<Ship> ships;
+    public Ship CurrentlySelected { get; set;}
 
     [HideInInspector]
     public  float numPlaced;
-    private Vector3 _dockPosition;
-    private float totalPossibleHits = 17;
 
+    [HideInInspector]
     public float playerHitCount = 0;
+
+    [HideInInspector]
     public float enemyHitCount = 0;
 
+    [HideInInspector]
     public bool hasWon = false;
-    public Ship CurrentlySelected { get; set;}
+
+    private List<GameObject> playerShips;
+    private Vector3 _dockPosition;
+    private float totalPossibleHits = 17;
 
     void Awake() {
         Instance = this;
@@ -45,7 +51,8 @@ public class ShipManager : MonoBehaviour
         }
         shipDock.SetActive(true);
         randomButton.SetActive(true);
-        //phaseUI.SetActive(true);
+        placeShipText.SetActive(true);
+        placementTooltip.SetActive(false);
     }
 
     public void CheckScore(TileType tileType) {
@@ -107,6 +114,7 @@ public class ShipManager : MonoBehaviour
         randomButton.SetActive(false);
         readyButton.SetActive(false);
         shipDock.SetActive(false);
+        placeShipText.SetActive(false);
         GameManager.Instance.ChangeState(GameState.PlayerTurn);
     }
 

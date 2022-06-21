@@ -8,7 +8,14 @@ public class BoardManager : MonoBehaviour
     public GameObject missile;
 
     [SerializeField]
+    [HideInInspector]
     public int _width, _height;
+
+    public delegate Tile GetTileAtPosition(Vector2 tilePos);
+    public GetTileAtPosition tileDelegate;
+
+    [HideInInspector]
+    public bool oneTilePerTurn = false;
 
     [SerializeField]
     private Tile _tile;
@@ -18,10 +25,6 @@ public class BoardManager : MonoBehaviour
 
     private Dictionary<Vector2, Tile> playerTiles;
     private Dictionary<Vector2, Tile> opponentTiles;
-    public delegate Tile GetTileAtPosition(Vector2 tilePos);
-    public GetTileAtPosition tileDelegate;
-
-    public bool oneTilePerTurn = false;
 
     void Awake()
     {
@@ -114,6 +117,8 @@ public class BoardManager : MonoBehaviour
         }
     }
 
+    // Due to the way the ship asset center points were made, each ship had different center points, while not the cleanest solution, I think it is pretty effecient.
+    // For each tile the ship occupies, set the tiles occupation and type of ship
     public void UpdateTiles(Orientation shipOrientation, Shiptype shipType, float shipSize, Vector2 tilePos, bool placement, TileType tileType)
     {
         tileDelegate = tileType == TileType.PLAYER ? BoardManager.Instance.GetPlayerTileAtPosition : BoardManager.Instance.GetOpponentTileAtPosition;
@@ -210,6 +215,7 @@ public class BoardManager : MonoBehaviour
         }
     }
 
+    // Similar to the above function to help the player know exactly which tiles they are placing their ships over
     public List<Tile> GetHoveringTiles(Orientation shipOrientation, float shipSize, Vector2 tilePos)
     {
         List<Tile> result = new List<Tile>();
@@ -320,6 +326,7 @@ public class BoardManager : MonoBehaviour
         }
     }
 
+    // Checks each tile the ship is over whether they are occupied, and on the grid
     public bool CanPlace(Orientation shipOrientation, float shipSize, Vector2 tilePos, TileType tileType)
     {
         tileDelegate = tileType == TileType.PLAYER ? BoardManager.Instance.GetPlayerTileAtPosition : BoardManager.Instance.GetOpponentTileAtPosition;

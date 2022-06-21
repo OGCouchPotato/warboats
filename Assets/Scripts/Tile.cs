@@ -68,6 +68,7 @@ public class Tile : MonoBehaviour
         Destroy(launchedMissile);
         CheckAttack();
         yield return new WaitForSeconds(2.0f);
+        // Prevent player from spam clicking dropping more than one bomb per turn
         if (ShipManager.Instance.hasWon == false)
         {
             BoardManager.Instance.oneTilePerTurn = false;
@@ -83,6 +84,7 @@ public class Tile : MonoBehaviour
 
     }
 
+    /* Checks whether guess is a hit or a miss, updates the board, score and AI with the corresponding result */
     private void CheckAttack()
     {
         isMarked = true;
@@ -207,6 +209,7 @@ public class Tile : MonoBehaviour
                 Ship currentShip = ShipManager.Instance.CurrentlySelected;
                 if (BoardManager.Instance.CanPlace(currentShip.currentOrientation, currentShip.size, tileIndex, TileType.PLAYER))
                 {
+                    ShipManager.Instance.placementTooltip.SetActive(false);
                     currentShip.PlaceShip(tileIndex, false);
                     BoardManager.Instance.ScrubHoverTiles();
                 }

@@ -203,6 +203,8 @@ public class AIManager : MonoBehaviour
         return RandomGuess();
     }
 
+    /* If easy mode, random guess every move. If on hard mode, make a random guess until it gets a hit, then makes a guess in all cardinal directions
+        if it finds another hit, limits next guesses to specific axis. If it doesn't get another hit, default back to random */
     public Tile MakeGuess()
     {
         if (_justSunk)
